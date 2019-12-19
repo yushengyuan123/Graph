@@ -3,6 +3,7 @@
 #define UNVISITED 0
 #define VISITED 1
 #define ERROR -1
+#define NotInit -2
 
 typedef char VexType;
 typedef int Status;
@@ -168,43 +169,6 @@ Status CreateGraph_AL(ALGraph *G, VexType *vexs, int n, ArcInfo *arcs, int e) {
 	return 1;
 };
 
-/**
-*功能：插入边或弧,在图中增加k顶点到m顶点的边或弧
-*参数说明：图，顶点k，顶点m，顶点权值
-*/
-Status AddArc_AL(ALGraph *G, int k, int m, int info) {
-	AdjVexNode *p;
-
-	if(k < 0 || m < 0 || k >G->n || m > G->n) {
-		return ERROR;
-	}
-
-	p = G->vexs[k].firstArc;
-
-	if(p == NULL) {
-		return ERROR;
-	}
-	//判断弧是否存在
-	while(p != NULL) {
-		if(m == p->adjves) {
-			return ERROR;
-		}
-	}
-
-	p = (AdjVexNodeP)malloc(sizeof(AdjVexNode));
-
-	if(p == NULL) {
-		return ERROR;
-	}
-
-	p->adjves = m;
-	p->info = info;
-	p->nextArc = G->vexs[k].firstArc;
-	G->vexs[k].firstArc = p;
-	G->e++;
-
-	return 1;
-};
 
 /**
 * function:求某个顶点第一个邻接顶点
@@ -260,7 +224,7 @@ Status initEdge(VexType *vexs, ArcInfo *arcs, int e, int n) {
 				arcs[index].info = right;
 				arcs[index].v = vexs[i];
 				arcs[index].w = vexs[j];
-				printf("%d,%c,%c\n", arcs[index].info,arcs[index].v,arcs[index].w);
+				printf("输入结点权值为%d,由%c->%c\n", arcs[index].info,arcs[index].v,arcs[index].w);
 				index++;//记录边的条数看是否匹配，不匹配则重新输入。
 				if(index == e) {
                     return 1;
@@ -274,27 +238,114 @@ Status initEdge(VexType *vexs, ArcInfo *arcs, int e, int n) {
 }
 
 /**
-* function：输入顶点信息
-* params：
+* function:输入顶点信息
+* params:
 */
 Status initPoint(VexType *vexs, int n) {
 	int i;
+	char m;
+	printf("%d个顶点的数值域,连续输入不需要空格隔开:", n);
+	fflush(stdin);
 	for(i = 0; i < n; i++) {
-		printf("第%d个顶点的数值域信息:", i + 1);
-		//清空输入缓冲区避免输入时候出现的bug
-		fflush(stdin);
-		vexs[i] = getchar();
-		printf("%c\n", vexs[i]);
+		scanf("%c", &vexs[i]);
+	}
+	printf("顶点数组输入为:");
+	for(i = 0; i < n;i++) {
+        printf("%c ", vexs[i]);
 	}
 	return 1;
 }
 
 /**
-* function：连通图的遍历 (深度优先)
-* params：图，从k顶点出发
+* function:在图中k顶点后插入m顶点增加顶点
+* params:图，插入顶顶k的位序，插入顶点m的位序，
+*/
+Status AddArc_AL(ALGraph *G, int k, int m, int info, int *e) {
+    if(k < 0 || k > G->n) {
+        return ERROR;
+    }
+    AdjVexNodeP p = G->vexs[k].firstArc;
+    //先判断一下顶点存不存在
+    while(p != NULL) {
+        if(m == p->adjves) {
+            return ERROR;
+        }
+        p = p->nextArc;
+    }
+    p = (AdjVexNodeP)malloc(sizeof(AdjVexNode));
+
+    if(p == NULL) {
+        return ERROR;
+    }
+    p->nextArc = G->vexs[k].firstArc;
+    G->vexs[k].firstArc = p;
+    p->adjves = m;
+    p->info = info;
+    *e++;
+
+    return 1;
+}
+
+/**
+* function:删除k顶点后的m顶点
+* params:图，删除顶点k的位序，删除顶点m的位序，
+*/
+Status RemoveArc_AL(ALGraph *G, int k, int m, int *e) {
+    //todo 还要穿一个边数
+    if(k < 0 || k > G->n) {
+         return ERROR;
+    }
+
+    if(G == NULL) {
+        return NotInit;
+    };
+    AdjVexNodeP p, pre = G->vexs[k].firstArc;
+    //先判断一下顶点存不存在
+    if(pre->nextArc != NULL) {
+        if(m != pre->adjves) {
+            while(1) {
+                printf("fuckaaa");
+                printf("%d", pre->adjves);
+                if(pre == NULL) {
+                    return ERROR;
+                }
+                if(m == pre->nextArc->adjves) {
+                    printf("%d", pre->adjves);
+                    p = pre->nextArc;
+                    break;
+                }
+                pre = pre->nextArc;
+            }
+            pre->nextArc = p->nextArc;
+            free(p);
+            *e--;
+            return 1;
+        } else {
+            G->vexs[k].firstArc = pre->nextArc;
+            free(pre);
+            *e--;
+            return 1;        }
+    } else {
+        free(pre);
+        G->vexs[k].firstArc = NULL;
+        *e--;
+        return 1;
+    }
+}
+
+
+/**
+* function:连通图的遍历 (深度优先)
+* params:图，从k顶点出发
 */
 Status DFS_M(ALGraph *G, int k) {
+    if(G == NULL) {
+        return NotInit;
+    }
 	int i;
+	for(i = 0; i < G->n; i++) {
+        G->tags[i] = UNVISITED;
+    }
 	G->tags[k] = VISITED;
 	//记录第一个顶点所在位置指针
 	printf("%c", G->vexs[k]);
@@ -315,6 +366,9 @@ Status DFS_M(ALGraph *G, int k) {
 * params：图
 */
 Status BFSTraverse_AL(ALGraph *G) {
+    if(G == NULL) {
+        return NotInit;
+    }
     int i,j,k;
 
     AdjVexNode *p;
@@ -331,7 +385,6 @@ Status BFSTraverse_AL(ALGraph *G) {
             printf("%c ", G->vexs[i].data);
             EnQueue_LQ(&Q, i);
             //TravelQueue(&Q);
-            printf("\n");
             while(DeQueue_LQ(&Q, &k) != ERROR) {
                 for(j = FirstAdjVex_AL(G, k, &p); j >= 0; j = NextAdjVex_AL(G, k, &p)) {
                     if(UNVISITED == G->tags[j]) {
@@ -345,36 +398,143 @@ Status BFSTraverse_AL(ALGraph *G) {
     }
 }
 
+void Format() {
+    printf("1.初始化有向图 2.向图中插入弧 3.删除弧 4.广度遍历 5.深度遍历 6.摧毁有向图 7.退出程序\n");
+}
+
 int main(int argc, char *argv[]) {
-	ALGraph	*p = (ALGraph *)malloc(sizeof(ALGraph));
+	ALGraph	*p = NULL;
 	LQueue q;
 	VexType *vexs;
 	//存放顶点信息的数组
 	ArcInfo *arcs;
+	//输入索引操作
+	int index;
+	//返回操作
+	char returnBtn;
 	int i;
 	//图结点的数量
 	int n;
 	//图的边的数目
 	int e;
+	//插入到哪一个结点中
+	int insert;
+	//插入的结点顶点位序
+	int insertAfter;
+	//插入顶点的权值
+	int insertInfo;
+	//两个遍历返回的结果
+    int result = 0;
 
-	printf("请输入节点数量\n");
-	scanf("%d", &n);
-	vexs = (VexType *)malloc(n * sizeof(VexType));
-	printf("请输入图的边的数目\n");
-	scanf("%d", &e);
-	arcs = (ArcInfo *)malloc(e * sizeof(ArcInfo));
-	printf("请输入图顶点的数值域\n");
-	if(initPoint(vexs, n)) {
-		printf("输入成功\n");
-		if(initEdge(vexs, arcs, e, n)) {
-			CreateGraph_AL(p, vexs, n, arcs, e);
-			printf("我真的是叼你了%d", p->vexs[0].firstArc->nextArc->adjves);
-			printf("图创建成功\n");
-			printf("深度遍历结果\n");
-			//DFS_M(p , 0);
-			BFSTraverse_AL(p);
-		} else {
-			printf("输入失败\n");
-		}
+	while(1) {
+        system("cls");
+        Format();
+        printf("请输入你要执行的操作:");
+        scanf("%d", &index);
+        if(index <=0 || index > 7) {
+            printf("输入有误,请重新输入\n");
+        } else {
+            if(index == 1) {
+                p = (ALGraph *)malloc(sizeof(ALGraph));
+                printf("开始初始化图\n");
+                printf("请输入结点数量\n");
+                scanf("%d", &n);
+                vexs = (VexType *)malloc(n * sizeof(VexType));
+                printf("请输入图的边的数目\n");
+                scanf("%d", &e);
+                arcs = (ArcInfo *)malloc(e * sizeof(ArcInfo));
+                printf("请输入图顶点的数值域\n");
+                if(initPoint(vexs, n)) {
+                    printf("输入成功\n");
+                    if(initEdge(vexs, arcs, e, n)) {
+                        CreateGraph_AL(p, vexs, n, arcs, e);
+                        printf("图创建成功\n");
+                    } else {
+                        printf("传入参数有误\n");
+                    }
+                    printf("输入任意键确认返回\n");
+                    fflush(stdin);
+                    scanf("%c", &returnBtn);
+                }
+
+            }
+
+            if(index == 2) {
+                printf("请输入你插入在哪一个结点中,输入顶点位序:");
+                fflush(stdin);
+                scanf("%d", &insert);
+                printf("请输入你要插入的结点的位序:");
+                fflush(stdin);
+                scanf("%d", &insertAfter);
+                printf("请输入该弧的权值:");
+                fflush(stdin);
+                scanf("%d", &insertInfo);
+                if(AddArc_AL(p, insert, insertAfter, insertInfo, &e)) {
+                    printf("插入成功\n");
+                } else {
+                    printf("传入参数有误\n");
+                }
+                printf("输入任意键确认返回\n");
+                fflush(stdin);
+                scanf("%c", &returnBtn);
+            }
+
+            if(index == 3) {
+                if(p == NULL) {
+                    printf("请先初始化\n");
+                } else {
+                    printf("请输入你删除哪一个顶点之后的连接点,输入其顶点位序:");
+                    fflush(stdin);
+                    scanf("%d", &insert);
+                    printf("请输入你要删除的结点的位序:");
+                    fflush(stdin);
+                    scanf("%d", &insertAfter);
+                    if(RemoveArc_AL(p, insert, insertAfter, &e)) {
+                        printf("删除成功\n");
+                    } else {
+                        printf("传入参数有误\n");
+                    }
+                }
+                printf("输入任意键确认返回\n");
+                fflush(stdin);
+                scanf("%c", &returnBtn);
+            }
+
+            if(index == 4) {
+                result = BFSTraverse_AL(p);
+                if(result == 1) {
+                    printf("广度优先遍历结果为: ");
+                } else if(result == -2) {
+                    printf("请先初始化\n");
+                } else if(result == -1) {
+                    printf("传入参数有误\n");
+                }
+                printf("输入任意键确认返回\n");
+                fflush(stdin);
+                scanf("%c", &returnBtn);
+            }
+
+            if(index == 5) {
+                result = DFS_M(p, 0);
+                 if(result == 1) {
+                    printf("深度优先遍历结果为: ");
+                } else if(result == -2) {
+                    printf("请先初始化\n");
+                } else if(result == -1) {
+                    printf("传入参数有误\n");
+                }
+                printf("\n输入任意键确认返回\n");
+                fflush(stdin);
+                scanf("%c", &returnBtn);
+            }
+
+            if(index == 6) {
+
+            }
+
+            if(index == 7) {
+                return 0;
+            }
+        }
 	}
 }
