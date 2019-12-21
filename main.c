@@ -291,7 +291,6 @@ Status AddArc_AL(ALGraph *G, int k, int m, int info, int *e) {
 * params:图，删除顶点k的位序，删除顶点m的位序，
 */
 Status RemoveArc_AL(ALGraph *G, int k, int m, int *e) {
-    //todo 还要穿一个边数
     if(k < 0 || k > G->n) {
          return ERROR;
     }
@@ -343,12 +342,9 @@ Status DFS_M(ALGraph *G, int k) {
         return NotInit;
     }
 	int i;
-	for(i = 0; i < G->n; i++) {
-        G->tags[i] = UNVISITED;
-    }
 	G->tags[k] = VISITED;
 	//记录第一个顶点所在位置指针
-	printf("%c", G->vexs[k]);
+	printf("%c ", G->vexs[k]);
 	AdjVexNode *p;
 
     p = G->vexs[k].firstArc;
@@ -359,6 +355,24 @@ Status DFS_M(ALGraph *G, int k) {
         p = p->nextArc;
 	}
 	return 1;
+};
+
+/**
+* function:连通图的遍历 (深度优先),连通图非连通图都可以
+* params:图
+*/
+Status DFS_M_Other(ALGraph *G) {
+    if(G == NULL) {
+        return NotInit;
+    }
+	int i;
+
+    for(i = 0; i < G->n; i++) {
+        if(UNVISITED == G->tags[i]) {
+            DFS_M(G, i);
+        }
+    }
+    return 1;
 };
 
 /**
@@ -398,6 +412,25 @@ Status BFSTraverse_AL(ALGraph *G) {
     }
 }
 
+Status DestoryGraph_AL(ALGraph **G) {
+    int i;
+    AdjVexNode *p, *temp;
+
+    if(*G == NULL) {
+        return 0;
+    }
+
+    for(i = 0; i < (*G)->n; i++) {
+        p = (*G)->vexs[i].firstArc;
+        while(p != NULL) {
+            temp = p;
+            p = temp->nextArc;
+            free(p);
+        }
+    }
+    *G = NULL;
+}
+
 void Format() {
     printf("1.初始化有向图 2.向图中插入弧 3.删除弧 4.广度遍历 5.深度遍历 6.摧毁有向图 7.退出程序\n");
 }
@@ -425,6 +458,8 @@ int main(int argc, char *argv[]) {
 	int insertInfo;
 	//两个遍历返回的结果
     int result = 0;
+    //还原标志域指针
+    int clearIndex;
 
 	while(1) {
         system("cls");
@@ -460,19 +495,23 @@ int main(int argc, char *argv[]) {
             }
 
             if(index == 2) {
-                printf("请输入你插入在哪一个结点中,输入顶点位序:");
-                fflush(stdin);
-                scanf("%d", &insert);
-                printf("请输入你要插入的结点的位序:");
-                fflush(stdin);
-                scanf("%d", &insertAfter);
-                printf("请输入该弧的权值:");
-                fflush(stdin);
-                scanf("%d", &insertInfo);
-                if(AddArc_AL(p, insert, insertAfter, insertInfo, &e)) {
-                    printf("插入成功\n");
+                if(p == NULL) {
+                    printf("先初始化有向图\n");
                 } else {
-                    printf("传入参数有误\n");
+                    printf("请输入你插入在哪一个结点中,输入顶点位序:");
+                    fflush(stdin);
+                    scanf("%d", &insert);
+                    printf("请输入你要插入的结点的位序:");
+                    fflush(stdin);
+                    scanf("%d", &insertAfter);
+                    printf("请输入该弧的权值:");
+                    fflush(stdin);
+                    scanf("%d", &insertInfo);
+                    if(AddArc_AL(p, insert, insertAfter, insertInfo, &e)) {
+                        printf("插入成功\n");
+                    } else {
+                        printf("传入参数有误\n");
+                    }
                 }
                 printf("输入任意键确认返回\n");
                 fflush(stdin);
@@ -501,38 +540,46 @@ int main(int argc, char *argv[]) {
             }
 
             if(index == 4) {
-                result = BFSTraverse_AL(p);
-                if(result == 1) {
+                if(p != NULL) {
                     printf("广度优先遍历结果为: ");
-                } else if(result == -2) {
+                    result = BFSTraverse_AL(p);
+                } else{
                     printf("请先初始化\n");
-                } else if(result == -1) {
-                    printf("传入参数有误\n");
                 }
-                printf("输入任意键确认返回\n");
+                printf("请入任意键确认返回\n");
                 fflush(stdin);
                 scanf("%c", &returnBtn);
             }
 
             if(index == 5) {
-                result = DFS_M(p, 0);
-                 if(result == 1) {
+                if(p != NULL) {
+                    for(clearIndex = 0; clearIndex < p->n; clearIndex++) {
+                        p->tags[clearIndex] = UNVISITED;
+                    }
                     printf("深度优先遍历结果为: ");
-                } else if(result == -2) {
-                    printf("请先初始化\n");
-                } else if(result == -1) {
-                    printf("传入参数有误\n");
+                    DFS_M_Other(p);
+                } else {
+                    printf("请先初始化");
                 }
-                printf("\n输入任意键确认返回\n");
+                printf("\n输入任意键确认返回");
                 fflush(stdin);
                 scanf("%c", &returnBtn);
             }
 
             if(index == 6) {
-
+                if(p == NULL) {
+                    printf("图已经为空，无法销毁\n");
+                } else {
+                    DestoryGraph_AL(&p);
+                    printf("销毁成功\n");
+                }
+                printf("输入任意键确认返回");
+                fflush(stdin);
+                scanf("%c", &returnBtn);
             }
 
             if(index == 7) {
+                fflush(stdin);
                 return 0;
             }
         }
